@@ -479,7 +479,7 @@ public class MemoryChunk {
     }
   }
 
-  private static long getAddress(final ByteBuffer buffer) {
+  public static long getAddress(final ByteBuffer buffer) {
     if (buffer == null) {
       throw new NullPointerException("Buffer null");
     }

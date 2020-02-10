@@ -25,9 +25,7 @@ import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageSender;
 import org.apache.reef.annotations.audience.DriverSide;
 import org.apache.reef.driver.context.ActiveContext;
-import org.apache.reef.driver.evaluator.AllocatedEvaluator;
-import org.apache.reef.driver.evaluator.EvaluatorRequest;
-import org.apache.reef.driver.evaluator.EvaluatorRequestor;
+import org.apache.reef.driver.evaluator.*;
 import org.apache.reef.tang.Configuration;
 import org.apache.reef.tang.Configurations;
 import org.apache.reef.tang.Tang;
@@ -80,10 +78,14 @@ public final class ContainerManager {
    */
   private final Map<String, ResourceSpecification> evaluatorIdToResourceSpec;
 
+
+  private final JVMProcessFactory jvmProcessFactory;
+
   @Inject
   private ContainerManager(@Parameter(JobConf.ScheduleSerThread.class) final int scheduleSerThread,
                            final EvaluatorRequestor evaluatorRequestor,
-                           final MessageEnvironment messageEnvironment) {
+                           final MessageEnvironment messageEnvironment,
+                           final JVMProcessFactory jvmProcessFactory) {
     this.isTerminated = false;
     this.evaluatorRequestor = evaluatorRequestor;
     this.messageEnvironment = messageEnvironment;
@@ -92,6 +94,7 @@ public final class ContainerManager {
     this.evaluatorIdToResourceSpec = new HashMap<>();
     this.requestLatchByResourceSpecId = new HashMap<>();
     this.serializationExecutorService = Executors.newFixedThreadPool(scheduleSerThread);
+    this.jvmProcessFactory = jvmProcessFactory;
   }
 
   /**
@@ -180,6 +183,12 @@ public final class ContainerManager {
         .build()
       )
     );
+
+
+    final JVMProcess jvmProcess = jvmProcessFactory.newEvaluatorProcess()
+      .setMemory(resourceSpecification.getMemory())
+      .addOption("-Djava.library.path=/Users/haeyoon/offheap_exp");
+    allocatedContainer.setProcess(jvmProcess);
 
     allocatedContainer.submitContext(Configurations.merge(configurationsToMerge));
   }

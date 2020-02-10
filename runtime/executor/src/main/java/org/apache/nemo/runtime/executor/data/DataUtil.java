@@ -22,6 +22,7 @@ import com.google.common.io.CountingInputStream;
 import org.apache.nemo.common.ByteBufferInputStream;
 import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.coder.EncoderFactory;
+import org.apache.nemo.runtime.executor.bytetransfer.ByteInputContext;
 import org.apache.nemo.runtime.executor.data.partition.NonSerializedPartition;
 import org.apache.nemo.runtime.executor.data.partition.SerializedPartition;
 import org.apache.nemo.runtime.executor.data.streamchainer.DecodeStreamChainer;
@@ -203,6 +204,75 @@ public final class DataUtil {
       concatStream = Stream.concat(concatStream, StreamSupport.stream(elementsInPartition.spliterator(), false));
     }
     return concatStream.collect(Collectors.toList());
+  }
+
+  @NotThreadSafe
+  public static final class DirectInputStreamIterator implements IteratorWithNumBytes<Long> {
+
+    private final Iterator<InputStream> inputStreams;
+    private ByteInputContext.ByteBufInputStream currentInputStream = null;
+
+    private boolean hasNext = false;
+    private Long nextAddress = -1L;
+    private boolean cannotContinue = false;
+
+    DirectInputStreamIterator(final Iterator<InputStream> inputStreams) {
+      this.inputStreams = inputStreams;
+    }
+
+    @Override
+    public long getNumSerializedBytes() throws NumBytesNotSupportedException {
+      return 0L;
+    }
+
+    @Override
+    public long getNumEncodedBytes() throws NumBytesNotSupportedException {
+      return 0L;
+    }
+
+    @Override
+    public boolean hasNext() {
+      if (hasNext) {
+        return true;
+      }
+      if (cannotContinue) {
+        return false;
+      }
+      while (true) {
+        if (currentInputStream == null) {
+          if (inputStreams.hasNext()) {
+            final InputStream nextInputStream = inputStreams.next();
+            if (!(nextInputStream instanceof ByteInputContext.ByteBufInputStream)) {
+              throw new RuntimeException("InputStream should be ByteBufInputStream!");
+            }
+            currentInputStream = (ByteInputContext.ByteBufInputStream) inputStreams.next();
+          } else {
+            cannotContinue = true;
+            return false;
+          }
+        }
+        try {
+          nextAddress = currentInputStream.readLongAddress();
+          hasNext = true;
+          return true;
+        } catch (final IOException e) {
+          currentInputStream = null;
+          nextAddress = -1L;
+        }
+      }
+    }
+
+    @Override
+    public Long next() {
+      if (hasNext()) {
+        final long address = nextAddress;
+        nextAddress = null;
+        hasNext = false;
+        return address;
+      } else {
+        throw new NoSuchElementException();
+      }
+    }
   }
 
   /**

@@ -19,10 +19,13 @@
 package org.apache.nemo.runtime.executor.bytetransfer;
 
 import io.netty.buffer.ByteBuf;
+import org.apache.nemo.runtime.executor.data.MemoryChunk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 import java.io.IOException;
 import java.io.InputStream;
@@ -159,9 +162,13 @@ public final class ByteInputContext extends ByteTransferContext {
   /**
    * An {@link InputStream} implementation that reads data from a composition of {@link ByteBuf}s.
    */
-  private static final class ByteBufInputStream extends InputStream {
+  public static final class ByteBufInputStream extends InputStream {
 
     private final ClosableBlockingQueue<ByteBuf> byteBufQueue = new ClosableBlockingQueue<>();
+
+    private Iterator<ByteBuffer> byteBufferIter = null;
+    private ByteBuffer currentByteBuffer = null;
+    private long currentByteBufferAddress = -1L;
 
     @Override
     public int read() throws IOException {
@@ -178,6 +185,32 @@ public final class ByteInputContext extends ByteTransferContext {
           head.release();
         }
         return b;
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException(e);
+      }
+    }
+
+    public long readLongAddress() throws IOException {
+      try {
+        while (currentByteBuffer == null || currentByteBuffer.remaining() <= 0) {
+          while (byteBufferIter == null || !byteBufferIter.hasNext()) {
+            // Do not release heads here...
+            final ByteBuf nextByteBuf = byteBufQueue.take();
+            byteBufferIter = Arrays.asList(nextByteBuf.nioBuffers()).iterator();
+          }
+          currentByteBuffer = byteBufferIter.next();
+          currentByteBufferAddress = MemoryChunk.getAddress(currentByteBuffer);
+        }
+        if (currentByteBuffer.remaining() < 8) {
+          // This means that integer value is fragmented inside byteBuf!
+          // We do not support this situation right now...
+          throw new RuntimeException("Found fragmented off-heap integers!");
+        } else {
+          final int oldPos = currentByteBuffer.position();
+          currentByteBuffer.position(oldPos + 8);
+          return currentByteBufferAddress + oldPos;
+        }
       } catch (final InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new IOException(e);

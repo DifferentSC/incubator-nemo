@@ -44,7 +44,10 @@ public class LittleEndianLongCoder extends AtomicCoder<Long> {
 
   @Override
   public Long decode(final InputStream inStream) throws CoderException, IOException {
-    inStream.read(buffer, 0, 8);
+    int bytesToRead = 8;
+    while (bytesToRead > 0) {
+      bytesToRead -= inStream.read(buffer, 8 - bytesToRead, bytesToRead);
+    }
     return (((long)buffer[7] << 56) +
       ((long)(buffer[6] & 255) << 48) +
       ((long)(buffer[5] & 255) << 40) +

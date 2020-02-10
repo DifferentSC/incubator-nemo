@@ -25,6 +25,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.reef.annotations.audience.DriverSide;
 
 import java.util.HashMap;
@@ -101,6 +102,13 @@ public final class StagePartitioner implements Function<IRDAG, Map<IRVertex, Int
    * @return {@code true} if and only if the source and the destination vertex of the edge can be merged into one stage.
    */
   private boolean testMergeability(final IREdge edge, final IRDAG dag) {
+
+    if (edge.getSrc() instanceof SourceVertex) {
+      return true;
+    } else {
+      return false;
+    }
+
     /*
     // If the destination vertex has multiple inEdges, return false
     if (dag.getIncomingEdgesOf(edge.getDst()).size() > 1) {
@@ -112,8 +120,9 @@ public final class StagePartitioner implements Function<IRDAG, Map<IRVertex, Int
       return false;
     }
     // Return true if and only if the execution properties of the two vertices are compatible
-    return getStageProperties(edge.getSrc()).equals(getStageProperties(edge.getDst()));*/
-    return false;
+    return getStageProperties(edge.getSrc()).equals(getStageProperties(edge.getDst()));
+
+    return false;*/
   }
 
   /**

@@ -200,6 +200,7 @@ public final class ByteInputContext extends ByteTransferContext {
             byteBufferIter = Arrays.asList(nextByteBuf.nioBuffers()).iterator();
           }
           currentByteBuffer = byteBufferIter.next();
+          System.out.println("CurrentByteBuffer Remaining = " + currentByteBuffer.remaining());
           currentByteBufferAddress = MemoryChunk.getAddress(currentByteBuffer);
         }
         if (currentByteBuffer.remaining() < 8) {

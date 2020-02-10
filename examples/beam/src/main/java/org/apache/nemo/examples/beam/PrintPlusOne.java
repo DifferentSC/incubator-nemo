@@ -18,6 +18,8 @@
  */
 
 package org.apache.nemo.examples.beam;
+import org.apache.beam.sdk.coders.CoderProviders;
+import org.apache.beam.sdk.util.WindowedValue;
 import org.slf4j.Logger;
 
 
@@ -72,6 +74,8 @@ public final class PrintPlusOne {
       throw new RuntimeException(e);
     }
 
+    p.getCoderRegistry().registerCoderProvider(CoderProviders.fromStaticMethods(WindowedValue.class,
+      WindowedValue.ValueOnlyWindowedValueCoder.class));
     p.run();
 
   }

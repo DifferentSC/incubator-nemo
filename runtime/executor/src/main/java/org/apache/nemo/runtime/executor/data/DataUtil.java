@@ -19,6 +19,7 @@
 package org.apache.nemo.runtime.executor.data;
 
 import com.google.common.io.CountingInputStream;
+import org.apache.beam.sdk.util.WindowedValue;
 import org.apache.nemo.common.ByteBufferInputStream;
 import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.coder.EncoderFactory;
@@ -207,7 +208,7 @@ public final class DataUtil {
   }
 
   @NotThreadSafe
-  public static final class DirectInputStreamIterator implements IteratorWithNumBytes<Long> {
+  public static final class DirectInputStreamIterator implements IteratorWithNumBytes<WindowedValue<Long>> {
 
     private final Iterator<InputStream> inputStreams;
     private ByteInputContext.ByteBufInputStream currentInputStream = null;
@@ -245,7 +246,7 @@ public final class DataUtil {
             if (!(nextInputStream instanceof ByteInputContext.ByteBufInputStream)) {
               throw new RuntimeException("InputStream should be ByteBufInputStream!");
             }
-            currentInputStream = (ByteInputContext.ByteBufInputStream) inputStreams.next();
+            currentInputStream = (ByteInputContext.ByteBufInputStream) nextInputStream;
           } else {
             cannotContinue = true;
             return false;
@@ -263,12 +264,12 @@ public final class DataUtil {
     }
 
     @Override
-    public Long next() {
+    public WindowedValue<Long> next() {
       if (hasNext()) {
         final long address = nextAddress;
         nextAddress = null;
         hasNext = false;
-        return address;
+        return WindowedValue.valueInGlobalWindow(address);
       } else {
         throw new NoSuchElementException();
       }

@@ -44,7 +44,7 @@ public final class PrintPlusOne {
    */
   public static void main(final String[] args) {
     final Logger LOG = LoggerFactory.getLogger(PrintPlusOne.class.getName());
-    final String inputFilePath = args[0];
+    final String inputFilePath = "/Users/gyewon/repo/incubator-nemo/bin/input.txt";
 
     final PipelineOptions options = NemoPipelineOptionsFactory.create();
     options.setJobName("Offheap_demo");

@@ -187,7 +187,7 @@ public final class ContainerManager {
 
     final JVMProcess jvmProcess = jvmProcessFactory.newEvaluatorProcess()
       .setMemory(resourceSpecification.getMemory())
-      .addOption("-Djava.library.path=/Users/haeyoon/offheap_exp");
+      .addOption("-Djava.library.path=/Users/gyewon/offheap_exp");
     allocatedContainer.setProcess(jvmProcess);
 
     allocatedContainer.submitContext(Configurations.merge(configurationsToMerge));

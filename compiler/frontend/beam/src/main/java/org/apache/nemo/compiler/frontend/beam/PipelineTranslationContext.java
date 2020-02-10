@@ -153,7 +153,7 @@ final class PipelineTranslationContext {
   void addEdgeTo(final IRVertex dst, final PValue input) {
     if (input instanceof PCollection) {
       final Coder elementCoder = ((PCollection) input).getCoder();
-      final Coder windowCoder = ((PCollection) input).getWindowingStrategy().getWindowFn().windowCoder();
+      final Coder windowCoder = WindowedValue.getValueOnlyCoder(elementCoder);
       final IRVertex src = pValueToProducerVertex.get(input);
       if (src == null) {
         throw new IllegalStateException(String.format("Cannot find a vertex that emits pValue %s", input));

@@ -193,24 +193,26 @@ public final class ByteInputContext extends ByteTransferContext {
 
     public long readLongAddress() throws IOException {
       try {
-        while (currentByteBuffer == null || currentByteBuffer.remaining() <= 0) {
-          while (byteBufferIter == null || !byteBufferIter.hasNext()) {
-            // Do not release heads here...
-            final ByteBuf nextByteBuf = byteBufQueue.take();
+        if (currentByteBuffer == null || currentByteBuffer.remaining() <= 0) {
+          if (byteBufferIter == null || !byteBufferIter.hasNext()) {
+            final ByteBuf nextByteBuf = byteBufQueue.peek();
+            if (nextByteBuf == null) {
+              return -1;
+            }
             byteBufferIter = Arrays.asList(nextByteBuf.nioBuffers()).iterator();
+            byteBufQueue.take();
           }
           currentByteBuffer = byteBufferIter.next();
-          System.out.println("CurrentByteBuffer Remaining = " + currentByteBuffer.remaining());
           currentByteBufferAddress = MemoryChunk.getAddress(currentByteBuffer);
         }
-        if (currentByteBuffer.remaining() < 8) {
+        if (currentByteBuffer.remaining() < 9) {
           // This means that integer value is fragmented inside byteBuf!
           // We do not support this situation right now...
-          throw new RuntimeException("Found fragmented off-heap integers!");
+          throw new RuntimeException("Found fragmented off-heap nemo event!");
         } else {
           final int oldPos = currentByteBuffer.position();
-          currentByteBuffer.position(oldPos + 8);
-          return currentByteBufferAddress + oldPos;
+          currentByteBuffer.position(oldPos + 9);
+          return currentByteBufferAddress + oldPos + 1;
         }
       } catch (final InterruptedException e) {
         Thread.currentThread().interrupt();

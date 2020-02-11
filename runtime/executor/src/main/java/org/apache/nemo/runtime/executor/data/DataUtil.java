@@ -254,6 +254,9 @@ public final class DataUtil {
         }
         try {
           nextAddress = currentInputStream.readLongAddress();
+          if (nextAddress == -1L) {
+            throw new IOException();
+          }
           hasNext = true;
           return true;
         } catch (final IOException e) {

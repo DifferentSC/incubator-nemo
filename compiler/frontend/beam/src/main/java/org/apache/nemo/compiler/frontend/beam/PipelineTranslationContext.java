@@ -38,6 +38,8 @@ import org.apache.nemo.compiler.frontend.beam.coder.BeamDecoderFactory;
 import org.apache.nemo.compiler.frontend.beam.coder.BeamEncoderFactory;
 import org.apache.nemo.compiler.frontend.beam.coder.SideInputCoder;
 import org.apache.nemo.compiler.frontend.beam.transform.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,6 +50,7 @@ import java.util.Stack;
  */
 
 final class PipelineTranslationContext {
+
   private final PipelineOptions pipelineOptions;
   private final DAGBuilder<IRVertex, IREdge> builder;
   private final Map<PValue, TransformHierarchy.Node> pValueToProducerBeamNode;
@@ -131,8 +134,8 @@ final class PipelineTranslationContext {
       // Second edge: transform to the dstIRVertex
       final IREdge secondEdge =
         new IREdge(CommunicationPatternProperty.Value.BROADCAST, sideInputTransformVertex, dstVertex);
-      final WindowedValue.FullWindowedValueCoder sideInputElementCoder =
-        WindowedValue.getFullCoder(SideInputCoder.of(viewCoder), windowCoder);
+      final WindowedValue.ValueOnlyWindowedValueCoder sideInputElementCoder =
+        WindowedValue.getValueOnlyCoder(SideInputCoder.of(viewCoder));
 
       // The vertices should be Parallelism=1
       srcVertex.setPropertyPermanently(ParallelismProperty.of(1));
@@ -153,7 +156,7 @@ final class PipelineTranslationContext {
   void addEdgeTo(final IRVertex dst, final PValue input) {
     if (input instanceof PCollection) {
       final Coder elementCoder = ((PCollection) input).getCoder();
-      final Coder windowCoder = WindowedValue.getValueOnlyCoder(elementCoder);
+      final Coder windowCoder = ((PCollection) input).getWindowingStrategy().getWindowFn().windowCoder();
       final IRVertex src = pValueToProducerVertex.get(input);
       if (src == null) {
         throw new IllegalStateException(String.format("Cannot find a vertex that emits pValue %s", input));
@@ -184,8 +187,8 @@ final class PipelineTranslationContext {
       edge.setProperty(KeyEncoderProperty.of(new BeamEncoderFactory(keyCoder)));
       edge.setProperty(KeyDecoderProperty.of(new BeamDecoderFactory(keyCoder)));
     }
-
-    final WindowedValue.FullWindowedValueCoder coder = WindowedValue.getFullCoder(elementCoder, windowCoder);
+    final WindowedValue.ValueOnlyWindowedValueCoder coder = WindowedValue
+      .getValueOnlyCoder(elementCoder);
     edge.setProperty(EncoderProperty.of(new BeamEncoderFactory<>(coder)));
     edge.setProperty(DecoderProperty.of(new BeamDecoderFactory<>(coder)));
 

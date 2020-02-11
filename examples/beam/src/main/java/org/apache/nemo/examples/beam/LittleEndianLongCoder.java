@@ -20,6 +20,7 @@ package org.apache.nemo.examples.beam;
 
 import org.apache.beam.sdk.coders.AtomicCoder;
 import org.apache.beam.sdk.coders.CoderException;
+import org.apache.beam.sdk.values.TypeDescriptor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,10 +28,22 @@ import java.io.OutputStream;
 
 public class LittleEndianLongCoder extends AtomicCoder<Long> {
 
+  private static final LittleEndianLongCoder INSTANCE = new LittleEndianLongCoder();
+  private static final TypeDescriptor<Long> TYPE_DESCRIPTOR = new TypeDescriptor<Long>() {};
+
   private final byte[] buffer = new byte[8];
+
+  public static LittleEndianLongCoder of() {
+    return INSTANCE;
+  }
 
   @Override
   public void encode(final Long v, final OutputStream outStream) throws CoderException, IOException {
+
+    if (v == null) {
+      throw new CoderException("Cannot encode null!");
+    }
+
     buffer[0] = (byte)(v >>> 0);
     buffer[1] = (byte)(v >>> 8);
     buffer[2] = (byte)(v >>> 16);
@@ -56,5 +69,31 @@ public class LittleEndianLongCoder extends AtomicCoder<Long> {
       ((buffer[2] & 255) << 16) +
       ((buffer[1] & 255) <<  8) +
       ((buffer[0] & 255) <<  0));
+  }
+
+  @Override
+  public void verifyDeterministic() {}
+
+  @Override
+  public boolean consistentWithEquals() {
+    return true;
+  }
+
+  @Override
+  public boolean isRegisterByteSizeObserverCheap(Long value) {
+    return true;
+  }
+
+  @Override
+  public TypeDescriptor<Long> getEncodedTypeDescriptor() {
+    return TYPE_DESCRIPTOR;
+  }
+
+  @Override
+  protected long getEncodedElementByteSize(Long value) throws Exception {
+    if (value == null) {
+      throw new CoderException("cannot encode a null Long");
+    }
+    return 8;
   }
 }

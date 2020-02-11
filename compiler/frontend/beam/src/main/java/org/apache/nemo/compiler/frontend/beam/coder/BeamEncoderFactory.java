@@ -21,6 +21,7 @@ package org.apache.nemo.compiler.frontend.beam.coder;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.CoderException;
 import org.apache.beam.sdk.coders.VoidCoder;
+import org.apache.beam.sdk.util.WindowedValue;
 import org.apache.nemo.common.coder.EncoderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

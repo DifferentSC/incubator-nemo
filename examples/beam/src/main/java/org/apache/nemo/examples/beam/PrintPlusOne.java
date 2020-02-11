@@ -18,8 +18,10 @@
  */
 
 package org.apache.nemo.examples.beam;
+import org.apache.beam.sdk.coders.BigEndianLongCoder;
 import org.apache.beam.sdk.coders.CoderProviders;
 import org.apache.beam.sdk.util.WindowedValue;
+import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
 
 
@@ -51,6 +53,8 @@ public final class PrintPlusOne {
 
     final Pipeline p = Pipeline.create(options);
 
+    p.getCoderRegistry().registerCoderForClass(Long.class,
+      LittleEndianLongCoder.of());
     // processing in native env.
     try {
       GenericSourceSink.read(p, inputFilePath)
@@ -74,8 +78,8 @@ public final class PrintPlusOne {
       throw new RuntimeException(e);
     }
 
-    p.getCoderRegistry().registerCoderProvider(CoderProviders.fromStaticMethods(WindowedValue.class,
-      WindowedValue.ValueOnlyWindowedValueCoder.class));
+    /* p.getCoderRegistry().registerCoderProvider(CoderProviders.fromStaticMethods(WindowedValue.class,
+      WindowedValue.ValueOnlyWindowedValueCoder.class));*/
     p.run();
 
   }

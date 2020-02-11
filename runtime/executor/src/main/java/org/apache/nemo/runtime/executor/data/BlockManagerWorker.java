@@ -253,8 +253,8 @@ public final class BlockManagerWorker {
           return contextFuture
             .thenCompose(ByteInputContext::getCompletedFuture)
             // thenApply waits for the future.
-            .thenApply(streams -> new DataUtil.DirectInputStreamIterator(streams));
-              // serializerManager.getSerializer(runtimeEdgeId)));
+            .thenApply(streams -> new DataUtil.InputStreamIterator<>(streams,
+              serializerManager.getSerializer(runtimeEdgeId)));
         } else {
           /**
            * Process "each element" of a block as soon as the element comes in.
@@ -262,8 +262,8 @@ public final class BlockManagerWorker {
            * Probably best performance when there is no failure.
            */
           return contextFuture
-            .thenApply(context -> new DataUtil.DirectInputStreamIterator(context.getInputStreams()));
-              // serializerManager.getSerializer(runtimeEdgeId)));
+            .thenApply(context -> new DataUtil.InputStreamIterator<>(context.getInputStreams(),
+              serializerManager.getSerializer(runtimeEdgeId)));
         }
       }
     });

@@ -164,8 +164,15 @@ public final class ByteInputContext extends ByteTransferContext {
    */
   public static final class ByteBufInputStream extends InputStream {
 
+    // Temporary bytebuffer for storing fragmented data.
+    private static final int TEMP_BYTEBUF_SIZE = 4 * 1024;
+
     private final ClosableBlockingQueue<ByteBuf> byteBufQueue = new ClosableBlockingQueue<>();
 
+    private final ByteBuffer tempByteBuffer = ByteBuffer.allocateDirect(TEMP_BYTEBUF_SIZE);
+    private final byte[] tempByteArray = new byte[TEMP_BYTEBUF_SIZE];
+
+    private final long tempByteBufferAddress = MemoryChunk.getAddress(tempByteBuffer);
     private Iterator<ByteBuffer> byteBufferIter = null;
     private ByteBuffer currentByteBuffer = null;
     private long currentByteBufferAddress = -1L;
@@ -191,24 +198,41 @@ public final class ByteInputContext extends ByteTransferContext {
       }
     }
 
+    private boolean proceedToNextByteBuffer() throws InterruptedException {
+      if (byteBufferIter == null || !byteBufferIter.hasNext()) {
+        final ByteBuf nextByteBuf = byteBufQueue.peek();
+        if (nextByteBuf == null) {
+          return false;
+        }
+        byteBufferIter = Arrays.asList(nextByteBuf.nioBuffers()).iterator();
+        byteBufQueue.take();
+      }
+      currentByteBuffer = byteBufferIter.next();
+      currentByteBufferAddress = MemoryChunk.getAddress(currentByteBuffer);
+      return true;
+    }
+
     public long readLongAddress() throws IOException {
       try {
         if (currentByteBuffer == null || currentByteBuffer.remaining() <= 0) {
-          if (byteBufferIter == null || !byteBufferIter.hasNext()) {
-            final ByteBuf nextByteBuf = byteBufQueue.peek();
-            if (nextByteBuf == null) {
-              return -1;
-            }
-            byteBufferIter = Arrays.asList(nextByteBuf.nioBuffers()).iterator();
-            byteBufQueue.take();
+          if (!proceedToNextByteBuffer()) {
+            return -1L;
           }
-          currentByteBuffer = byteBufferIter.next();
-          currentByteBufferAddress = MemoryChunk.getAddress(currentByteBuffer);
         }
         if (currentByteBuffer.remaining() < 9) {
-          // This means that integer value is fragmented inside byteBuf!
-          // We do not support this situation right now...
-          throw new RuntimeException("Found fragmented off-heap nemo event!");
+          // The event is fragmented!
+          // Here, we merge the fragmented data into temporary byte buffer
+          // and returns its address
+          final int oldRemaining = currentByteBuffer.remaining();
+          currentByteBuffer.get(tempByteArray, 0, oldRemaining);
+          if (!proceedToNextByteBuffer()) {
+            return -1L;
+          }
+          currentByteBuffer.get(tempByteArray, oldRemaining, 9 - oldRemaining);
+          // Copy to tempByteBuffer
+          tempByteBuffer.clear();
+          tempByteBuffer.put(tempByteArray, 0, 9);
+          return tempByteBufferAddress + 1;
         } else {
           final int oldPos = currentByteBuffer.position();
           currentByteBuffer.position(oldPos + 9);

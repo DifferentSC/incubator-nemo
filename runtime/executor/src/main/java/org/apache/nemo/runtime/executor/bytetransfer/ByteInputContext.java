@@ -166,6 +166,7 @@ public final class ByteInputContext extends ByteTransferContext {
 
     // Temporary bytebuffer for storing fragmented data.
     private static final int TEMP_BYTEBUF_SIZE = 4 * 1024;
+    private long processedData = 0L;
 
     private final ClosableBlockingQueue<ByteBuf> byteBufQueue = new ClosableBlockingQueue<>();
 
@@ -208,6 +209,8 @@ public final class ByteInputContext extends ByteTransferContext {
         byteBufQueue.take();
       }
       currentByteBuffer = byteBufferIter.next();
+      processedData += currentByteBuffer.remaining();
+      System.out.println("Got bytebuf. Received data size = " + processedData);
       currentByteBufferAddress = MemoryChunk.getAddress(currentByteBuffer);
       return true;
     }

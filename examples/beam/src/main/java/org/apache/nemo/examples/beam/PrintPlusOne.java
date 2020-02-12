@@ -67,10 +67,8 @@ public final class PrintPlusOne {
         }))
         .apply(MapElements.via(new SimpleFunction<Long, Void>() { // the return type Long is not used but specified;
           @Override
-          public Void apply(final Long address) {
-            System.loadLibrary("NativeFunctions");
-            final NativeFunctions nf = new NativeFunctions();
-            nf.printPlusOne(address);
+          public Void apply(final Long value) {
+            final long value2 = value + 1;
             return null;
           }
         }));
